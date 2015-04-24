@@ -1,0 +1,4 @@
+[package]
+name = "elfutils-rs"
+version = "0.0.1"
+authors = ["Petr Machata <pmachata@redhat.com>"]
