@@ -497,4 +497,27 @@ fn test_archives() {
 
 #[test]
 fn test_elf_getarsym() {
+    use std::ffi::CStr;
+
+    let (elf, _) = get_elf("../tests/x2.ar");
+    let syms = unsafe {
+        let mut n = 0;
+        let buf = libelf::elf_getarsym(elf, &mut n);
+        assert_eq!(n, 4);
+
+        // The last one, however, is expected to be a fake member.
+        assert!((*buf.offset(3)).as_name.is_null());
+        n -= 1;
+
+        std::slice::from_raw_parts(buf, n as usize)
+    };
+    let names = ["foo", "bar", "baz"];
+    for i in 0..names.len() {
+        let name = unsafe {
+            let buf = syms[i].as_name;
+            assert!(!buf.is_null());
+            std::str::from_utf8_unchecked(CStr::from_ptr(buf).to_bytes())
+        };
+        assert_eq!(name, names[i]);
+    }
 }

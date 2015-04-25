@@ -121,6 +121,7 @@ pub type Elf = *mut Elf_impl;
 #[repr(C)]
 pub struct Elf_Scn;
 
+#[link(name = "elf")]
 extern "C" {
     /* Return descriptor for ELF file to work according to CMD.  */
     pub fn elf_begin(fildes: libc::c_int, cmd: Elf_Cmd, ref_elf: Elf) -> Elf;
@@ -184,15 +185,13 @@ extern "C" {
 
     /* Get section at INDEX.  */
     pub fn elf_getscn(elf: Elf, index: libc::size_t) -> *mut Elf_Scn;
-}
 
+    /* Get section at OFFSET.  */
+    pub fn elf32_offscn(elf: Elf, offset: elf::Elf32_Off) -> *mut Elf_Scn;
 
-// /* Get section at OFFSET.  */
-// extern Elf_Scn *elf32_offscn (Elf *__elf, Elf32_Off __offset);
-// /* Similar bug this time the binary calls is ELFCLASS64.  */
-// extern Elf_Scn *elf64_offscn (Elf *__elf, Elf64_Off __offset);
+    /* Similar bug this time the binary calls is ELFCLASS64.  */
+    pub fn elf64_offscn(elf: Elf, offset: elf::Elf64_Off) -> *mut Elf_Scn;
 
-extern "C" {
     /* Get index of section.  */
     pub fn elf_ndxscn(scn: *mut Elf_Scn) -> libc::size_t;
 
@@ -259,7 +258,7 @@ extern "C" {
        would be for TYPE.  The resulting Elf_Data pointer is valid until
        elf_end (ELF) is called.  */
     pub fn elf_getdata_rawchunk(elf: Elf, offset: loff_t, size: libc::size_t,
-                                tpe: Elf_Type) -> *mut Elf_Data;
+                                typ: Elf_Type) -> *mut Elf_Data;
 
     /* Return pointer to string at OFFSET in section INDEX.  */
     pub fn elf_strptr(elf: Elf, index: libc::size_t,
@@ -276,46 +275,41 @@ extern "C" {
 
     /* Get symbol table of archive.  */
     pub fn elf_getarsym(elf: Elf, narsyms: *mut libc::size_t) -> *mut Elf_Arsym;
-}
 
-// /* Control ELF descriptor.  */
-// extern int elf_cntl (Elf *__elf, Elf_Cmd __cmd);
+    /* Control ELF descriptor.  */
+    pub fn elf_cntl(elf: Elf, cmd: Elf_Cmd) -> libc::c_int;
 
-// /* Retrieve uninterpreted file contents.  */
-// extern char *elf_rawfile (Elf *__elf, size_t *__nbytes);
+    /* Retrieve uninterpreted file contents.  */
+    pub fn elf_rawfile(elf: Elf, nbytes: *mut libc::size_t) -> *mut libc::c_char;
 
+    /* Return size of array of COUNT elements of the type denoted by TYPE
+       in the external representation.  The binary class is taken from ELF.
+       The result is based on version VERSION of the ELF standard.  */
+    pub fn elf32_fsize(typ: Elf_Type, count: libc::size_t,
+                       version: libc::c_uint) -> libc::size_t;
 
-// /* Return size of array of COUNT elements of the type denoted by TYPE
-//    in the external representation.  The binary class is taken from ELF.
-//    The result is based on version VERSION of the ELF standard.  */
-// extern size_t elf32_fsize (Elf_Type __type, size_t __count,
-// 			   unsigned int __version)
-//        __attribute__ ((__const__));
-// /* Similar but this time the binary calls is ELFCLASS64.  */
-// extern size_t elf64_fsize (Elf_Type __type, size_t __count,
-// 			   unsigned int __version)
-//        __attribute__ ((__const__));
+    /* Similar but this time the binary calls is ELFCLASS64.  */
+    pub fn elf64_fsize(typ: Elf_Type, count: libc::size_t,
+                       version: libc::c_uint) -> libc::size_t;
 
+    /* Convert data structure from the representation in the file represented
+       by ELF to their memory representation.  */
+    pub fn elf32_xlatetom(dest: *mut Elf_Data, src: *const Elf_Data,
+                          encoding: libc::c_uint) -> *mut Elf_Data;
 
-// /* Convert data structure from the representation in the file represented
-//    by ELF to their memory representation.  */
-// extern Elf_Data *elf32_xlatetom (Elf_Data *__dest, const Elf_Data *__src,
-// 				 unsigned int __encode);
-// /* Same for 64 bit class.  */
-// extern Elf_Data *elf64_xlatetom (Elf_Data *__dest, const Elf_Data *__src,
-// 				 unsigned int __encode);
+    /* Same for 64 bit class.  */
+    pub fn elf64_xlatetom(dest: *mut Elf_Data, src: *const Elf_Data,
+                          encoding: libc::c_uint) -> *mut Elf_Data;
 
-// /* Convert data structure from to the representation in memory
-//    represented by ELF file representation.  */
-// extern Elf_Data *elf32_xlatetof (Elf_Data *__dest, const Elf_Data *__src,
-// 				 unsigned int __encode);
-// /* Same for 64 bit class.  */
-// extern Elf_Data *elf64_xlatetof (Elf_Data *__dest, const Elf_Data *__src,
-// 				 unsigned int __encode);
+    /* Convert data structure from to the representation in memory
+       represented by ELF file representation.  */
+    pub fn elf32_xlatetof(dest: *mut Elf_Data, src: *const Elf_Data,
+                          encoding: libc::c_uint) -> *mut Elf_Data;
 
+    /* Same for 64 bit class.  */
+    pub fn elf64_xlatetof(dest: *mut Elf_Data, src: *const Elf_Data,
+                          encoding: libc::c_uint) -> *mut Elf_Data;
 
-#[link(name = "elf")]
-extern "C" {
     /* Return error code of last failing function call.  This value is
        kept separately for each thread.  */
     pub fn elf_errno() -> libc::c_int;
@@ -328,27 +322,19 @@ extern "C" {
 
     /* Coordinate ELF library and application versions.  */
     pub fn elf_version(version: libc::c_uint) -> libc::c_uint;
+
+    /* Set fill bytes used to fill holes in data structures.  */
+    pub fn elf_fill(fill: libc::c_int);
+
+    /* Compute hash value.  */
+    pub fn elf_hash(string: *const libc::c_char) -> libc::c_ulong;
+
+    /* Compute hash value using the GNU-specific hash function.  */
+    pub fn elf_gnu_hash(string: *const libc::c_char) -> libc::c_ulong;
+
+    /* Compute simple checksum from permanent parts of the ELF file.  */
+    pub fn elf32_checksum(elf: Elf) -> libc::c_long;
+
+    /* Similar but this time the binary calls is ELFCLASS64.  */
+    pub fn elf64_checksum(elf: Elf) -> libc::c_long;
 }
-
-// /* Set fill bytes used to fill holes in data structures.  */
-// extern void elf_fill (int __fill);
-
-// /* Compute hash value.  */
-// extern unsigned long int elf_hash (const char *__string)
-//        __attribute__ ((__pure__));
-
-// /* Compute hash value using the GNU-specific hash function.  */
-// extern unsigned long int elf_gnu_hash (const char *__string)
-//        __attribute__ ((__pure__));
-
-
-// /* Compute simple checksum from permanent parts of the ELF file.  */
-// extern long int elf32_checksum (Elf *__elf);
-// /* Similar but this time the binary calls is ELFCLASS64.  */
-// extern long int elf64_checksum (Elf *__elf);
-
-// #ifdef __cplusplus
-// }
-// #endif
-
-// #endif  /* libelf.h */
